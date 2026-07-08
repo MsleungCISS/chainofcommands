@@ -1,0 +1,1245 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chain of Choices: How Injustice Happens</title>
+<style>
+  :root{
+    --bg:#F1ECE2; --paper:#FAF9F4; --sand:#D8CDB8; --sand-soft:#E7E0D2;
+    --gray:#7B7367; --ink:#2A2620; --ink-soft:#4A443B;
+    --accent:#8A2F2B; --accent-soft:#B4534E; --accent-bg:#F3E4E2;
+    --line:#C9BFAC; --focus:#34506B;
+    --f-body:"Century Gothic","Avenir Next","Arial",sans-serif;
+    --f-quote:Georgia,"Times New Roman",serif;
+    --f-doc:"Courier New",Courier,monospace;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#221F1A; --paper:#2C2822; --sand:#4A4336; --sand-soft:#353024;
+      --gray:#A29A8C; --ink:#EAE4D7; --ink-soft:#C9C1B1;
+      --accent:#C25B54; --accent-soft:#A34741; --accent-bg:#3A2B29;
+      --line:#4E4739; --focus:#8FB0CE;
+    }
+  }
+  :root[data-theme="light"]{
+    --bg:#F1ECE2; --paper:#FAF9F4; --sand:#D8CDB8; --sand-soft:#E7E0D2;
+    --gray:#7B7367; --ink:#2A2620; --ink-soft:#4A443B;
+    --accent:#8A2F2B; --accent-soft:#B4534E; --accent-bg:#F3E4E2;
+    --line:#C9BFAC; --focus:#34506B;
+  }
+  :root[data-theme="dark"]{
+    --bg:#221F1A; --paper:#2C2822; --sand:#4A4336; --sand-soft:#353024;
+    --gray:#A29A8C; --ink:#EAE4D7; --ink-soft:#C9C1B1;
+    --accent:#C25B54; --accent-soft:#A34741; --accent-bg:#3A2B29;
+    --line:#4E4739; --focus:#8FB0CE;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:var(--f-body); font-size:16px; line-height:1.65;
+  }
+  body.dyslexia{
+    font-family:Verdana,"Trebuchet MS",sans-serif;
+    letter-spacing:.04em; word-spacing:.12em; line-height:1.9;
+  }
+  h1,h2,h3,h4{line-height:1.25; text-wrap:balance; margin:0 0 .5em}
+  h2{font-size:1.6rem}
+  h3{font-size:1.15rem}
+  p{margin:.4em 0 .9em; max-width:66ch}
+  button{font-family:inherit; font-size:.95rem; cursor:pointer}
+  a{color:var(--focus)}
+  :focus-visible{outline:3px solid var(--focus); outline-offset:2px}
+  @media (prefers-reduced-motion: reduce){
+    *,*::before,*::after{animation:none!important; transition:none!important}
+  }
+
+  .eyebrow{
+    font-family:var(--f-doc); text-transform:uppercase; letter-spacing:.14em;
+    font-size:.72rem; color:var(--gray); margin-bottom:.35rem;
+  }
+  .datestamp{
+    display:inline-block; font-family:var(--f-doc); font-size:.85rem;
+    border:1px solid var(--line); padding:.15rem .6rem; background:var(--sand-soft);
+    letter-spacing:.08em; margin-bottom:.75rem;
+  }
+
+  /* ---------- header ---------- */
+  header.app{
+    background:var(--paper); border-bottom:1px solid var(--line);
+    padding:.9rem 1.2rem .7rem; position:sticky; top:0; z-index:40;
+  }
+  .app-title-row{display:flex; flex-wrap:wrap; align-items:baseline; gap:.5rem 1rem; margin-bottom:.6rem}
+  .app-title{font-size:1.05rem; font-weight:700; letter-spacing:.02em; margin:0}
+  .app-sub{font-size:.78rem; color:var(--gray)}
+  .toolbar{display:flex; flex-wrap:wrap; gap:.45rem; margin-left:auto}
+  .toolbar button{
+    background:var(--sand-soft); border:1px solid var(--line); color:var(--ink);
+    border-radius:3px; padding:.3rem .65rem; font-size:.78rem;
+  }
+  .toolbar button[aria-pressed="true"]{background:var(--ink); color:var(--paper); border-color:var(--ink)}
+
+  /* chain progress */
+  nav.chain{display:flex; align-items:center; overflow-x:auto; gap:0; padding:.2rem 0}
+  .chain-link{display:flex; align-items:center; flex:0 0 auto}
+  .chain-link button{
+    border:2px solid var(--line); background:var(--paper); color:var(--ink-soft);
+    border-radius:999px; padding:.32rem .8rem; font-size:.74rem; white-space:nowrap;
+    letter-spacing:.02em;
+  }
+  .chain-link button .n{font-family:var(--f-doc); font-weight:700; margin-right:.35rem}
+  .chain-link button.visited{border-color:var(--accent); color:var(--ink)}
+  .chain-link button.active{background:var(--accent); border-color:var(--accent); color:#fff}
+  .chain-connector{width:1.15rem; height:2px; background:var(--line); flex:0 0 auto}
+  .chain-connector.done{background:var(--accent)}
+
+  /* ---------- layout ---------- */
+  main{max-width:880px; margin:0 auto; padding:1.5rem 1.2rem 5rem}
+  section.panel{display:none}
+  section.panel.current{display:block}
+  .scene-head{margin:0 0 1.2rem}
+  .card{
+    background:var(--paper); border:1px solid var(--line); border-radius:4px;
+    padding:1.1rem 1.25rem; margin:0 0 1rem;
+  }
+  .grain{position:relative; overflow:hidden}
+  .grain::after{
+    content:""; position:absolute; inset:0; pointer-events:none; opacity:.5; mix-blend-mode:multiply;
+    background-image:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120"><filter id="g"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2"/><feColorMatrix type="saturate" values="0"/><feComponentTransfer><feFuncA type="linear" slope="0.06"/></feComponentTransfer></filter><rect width="120" height="120" filter="url(%23g)"/></svg>');
+  }
+  .quote{
+    font-family:var(--f-quote); font-size:1.02rem; line-height:1.7;
+    border-left:3px solid var(--accent); background:var(--sand-soft);
+    padding:.8rem 1rem; margin:.8rem 0;
+  }
+  .quote cite{display:block; font-family:var(--f-doc); font-style:normal; font-size:.72rem;
+    letter-spacing:.08em; color:var(--gray); margin-top:.55rem}
+  .note{font-size:.82rem; color:var(--gray); max-width:66ch}
+  /* prompts / journal */
+  .prompt{
+    background:var(--paper); border:1px solid var(--line); border-top:4px solid var(--accent);
+    padding:1rem 1.2rem; margin:1.3rem 0 1rem; border-radius:0 0 4px 4px;
+  }
+  .prompt label{display:block; font-weight:700; margin-bottom:.5rem; max-width:66ch}
+  .prompt textarea{
+    width:100%; min-height:5.2rem; font-family:inherit; font-size:.95rem; line-height:1.6;
+    border:1px solid var(--line); border-radius:3px; padding:.6rem .7rem;
+    background:var(--bg); color:var(--ink); resize:vertical;
+  }
+  .prompt .saved{font-family:var(--f-doc); font-size:.7rem; color:var(--gray); letter-spacing:.08em;
+    margin-top:.3rem; min-height:1em}
+
+  /* ELL sentence starters */
+  details.stems{border:1px dashed var(--line); background:var(--sand-soft); border-radius:3px;
+    margin:.15rem 0 .65rem; max-width:66ch}
+  details.stems summary{padding:.4rem .7rem; font-size:.8rem; cursor:pointer; color:var(--ink-soft);
+    font-family:var(--f-doc); letter-spacing:.04em}
+  details.stems ul{margin:.1rem 0 .6rem; padding-left:2rem}
+  details.stems li{margin:.3rem 0; font-family:var(--f-quote); font-size:.9rem; color:var(--ink-soft)}
+
+  /* vocab */
+  .vb{
+    background:none; border:none; padding:0; font:inherit; color:inherit;
+    border-bottom:2px dotted var(--accent); cursor:help;
+  }
+  #vocab-pop{
+    position:absolute; z-index:60; max-width:290px; background:var(--ink); color:var(--paper);
+    border-radius:4px; padding:.7rem .85rem; font-size:.82rem; line-height:1.55;
+    box-shadow:0 4px 14px rgba(0,0,0,.3); display:none;
+  }
+  #vocab-pop .tier{font-family:var(--f-doc); font-size:.62rem; letter-spacing:.12em;
+    text-transform:uppercase; opacity:.75; display:block; margin-bottom:.25rem}
+  #vocab-pop .el{display:block; margin-top:.4rem; padding-top:.4rem; border-top:1px solid rgba(255,255,255,.25);
+    font-style:italic; opacity:.9}
+
+  /* ---------- scene 1 collage ---------- */
+  .collage{display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:.8rem}
+  .hotspot{
+    text-align:left; border:1px solid var(--line); background:var(--paper); color:var(--ink);
+    border-radius:4px; padding:0; overflow:hidden;
+  }
+  .hotspot .ph{
+    height:88px; display:flex; align-items:center; justify-content:center;
+    background:linear-gradient(160deg,var(--sand) 0%,var(--sand-soft) 100%);
+    font-size:1.9rem; filter:grayscale(1) contrast(1.05);
+  }
+  .hotspot .t{padding:.55rem .75rem .35rem; font-weight:700; font-size:.88rem}
+  .hotspot .cap{padding:0 .75rem .7rem; font-size:.8rem; color:var(--ink-soft); display:none}
+  .hotspot.open .cap{display:block}
+  .hotspot.open{border-color:var(--accent)}
+
+  /* ---------- scene 2 ---------- */
+  .split{display:grid; grid-template-columns:1fr 1fr; gap:1rem}
+  @media (max-width:640px){ .split{grid-template-columns:1fr} }
+  .headline{
+    font-family:var(--f-doc); font-size:1.5rem; font-weight:700; letter-spacing:.04em;
+    border-bottom:3px double var(--ink); padding-bottom:.4rem; min-height:2.4rem;
+  }
+  .headline .cursor{display:inline-block; width:.6em; border-bottom:3px solid var(--accent); animation:blink 1s steps(1) infinite}
+  @keyframes blink{50%{opacity:0}}
+
+  /* ---------- scene 3 chain ---------- */
+  .chain3-wrap{display:grid; grid-template-columns:minmax(0,1fr) 250px; gap:1.2rem; align-items:start}
+  @media (max-width:760px){ .chain3-wrap{grid-template-columns:1fr} }
+  .node{border:2px solid var(--line); background:var(--paper); border-radius:4px; margin:0}
+  .node > button.nhead{
+    display:flex; width:100%; align-items:center; gap:.7rem; text-align:left;
+    background:none; border:none; color:inherit; padding:.85rem 1rem;
+  }
+  .node .num{
+    font-family:var(--f-doc); font-weight:700; font-size:.8rem; flex:0 0 auto;
+    width:1.9rem; height:1.9rem; border-radius:50%; border:2px solid var(--line);
+    display:flex; align-items:center; justify-content:center;
+  }
+  .node .ntitle{font-weight:700; font-size:1rem}
+  .node .nsub{font-size:.78rem; color:var(--gray); display:block}
+  .node .lock{margin-left:auto; font-family:var(--f-doc); font-size:.68rem; letter-spacing:.1em; color:var(--gray)}
+  .node.unlocked{border-color:var(--gray)}
+  .node.opened{border-color:var(--accent)}
+  .node.opened .num{border-color:var(--accent); background:var(--accent); color:#fff}
+  .node.locked > button.nhead{cursor:not-allowed; opacity:.55}
+  .node .nbody{display:none; padding:0 1rem 1rem; border-top:1px solid var(--line)}
+  .node.open .nbody{display:block}
+  .arrow{display:flex; flex-direction:column; align-items:center; margin:.15rem 0; color:var(--gray)}
+  .arrow svg{display:block}
+  .arrow .alabel{
+    font-family:var(--f-doc); font-size:.68rem; letter-spacing:.09em; text-transform:uppercase;
+    color:var(--accent); margin:.1rem 0 .15rem; text-align:center;
+  }
+  .arrow.lit{color:var(--accent)}
+  .counter{
+    border:2px dashed var(--gray); background:var(--sand-soft); border-radius:4px;
+    padding:1rem 1.1rem; font-size:.88rem; position:sticky; top:9.5rem;
+  }
+  .counter h3{font-size:.95rem}
+  .counter p{font-size:inherit}
+
+  /* ---------- maps ---------- */
+  .mapbox{background:var(--paper); border:1px solid var(--line); border-radius:4px; padding:1rem}
+  .mapbox svg{width:100%; height:auto; display:block}
+  .map-note{font-family:var(--f-doc); font-size:.68rem; letter-spacing:.09em; color:var(--gray);
+    text-transform:uppercase; margin-top:.5rem}
+  .camp-dot{cursor:pointer}
+  .camp-dot circle{fill:var(--ink-soft); stroke:var(--paper); stroke-width:1.5}
+  .camp-dot.sel circle{fill:var(--accent)}
+  .camp-dot text{font-family:var(--f-doc); font-size:9px; fill:var(--ink-soft)}
+  .campdetail{min-height:9rem}
+  .facts-strip{display:flex; flex-wrap:wrap; gap:.6rem; margin:.9rem 0}
+  .fact{
+    flex:1 1 150px; border:1px solid var(--line); background:var(--sand-soft);
+    padding:.6rem .8rem; border-radius:3px;
+  }
+  .fact b{display:block; font-size:1.05rem; font-variant-numeric:tabular-nums}
+  .fact span{font-size:.75rem; color:var(--gray)}
+
+  /* scene 6 timeline */
+  .timeline{margin:1rem 0}
+  .timeline input[type=range]{width:100%; accent-color:var(--accent)}
+  .tl-labels{display:flex; justify-content:space-between; font-family:var(--f-doc); font-size:.66rem;
+    color:var(--gray); letter-spacing:.04em}
+  .tl-card{min-height:7.5rem}
+
+  /* journal */
+  .jentry{border-bottom:1px solid var(--line); padding:.8rem 0}
+  .jentry .jq{font-weight:700; font-size:.9rem; margin-bottom:.3rem}
+  .jentry .ja{font-family:var(--f-quote); white-space:pre-wrap}
+  .jentry .empty{color:var(--gray); font-style:italic; font-family:var(--f-body); font-size:.85rem}
+  .btn-primary{
+    background:var(--accent); color:#fff; border:none; border-radius:3px;
+    padding:.55rem 1.1rem; font-weight:700;
+  }
+  .btn-primary:disabled{opacity:.45; cursor:not-allowed}
+  .btn-ghost{
+    background:none; border:1px solid var(--line); border-radius:3px; color:var(--ink);
+    padding:.5rem 1rem;
+  }
+  .readbtn{
+    background:var(--sand-soft); border:1px solid var(--line); border-radius:3px;
+    padding:.3rem .7rem; font-size:.78rem; margin-bottom:1rem; display:none;
+  }
+  body.readaloud .readbtn{display:inline-block}
+
+  /* words modal */
+  dialog{
+    border:2px solid var(--ink); border-radius:5px; max-width:620px; width:92%;
+    background:var(--paper); color:var(--ink); padding:1.4rem 1.5rem;
+  }
+  dialog::backdrop{background:rgba(20,17,12,.55)}
+  table.words{border-collapse:collapse; width:100%; font-size:.88rem; margin:.8rem 0}
+  table.words th,table.words td{border:1px solid var(--line); padding:.5rem .65rem; text-align:left; vertical-align:top}
+  table.words th{background:var(--sand-soft); font-family:var(--f-doc); font-size:.72rem;
+    letter-spacing:.1em; text-transform:uppercase}
+  .official{color:var(--gray); text-decoration:line-through; text-decoration-thickness:1px; text-decoration-color:var(--accent)}
+  .accurate{font-weight:700}
+
+  /* teacher */
+  details.tsec{border:1px solid var(--line); background:var(--paper); border-radius:4px; margin-bottom:.7rem}
+  details.tsec summary{padding:.75rem 1rem; font-weight:700; cursor:pointer}
+  details.tsec .inner{padding:0 1rem 1rem}
+  .tablewrap{overflow-x:auto}
+  table.plain{border-collapse:collapse; width:100%; font-size:.85rem}
+  table.plain th,table.plain td{border:1px solid var(--line); padding:.45rem .6rem; text-align:left; vertical-align:top}
+  table.plain th{background:var(--sand-soft)}
+  .trow{display:flex; flex-wrap:wrap; gap:.45rem; align-items:flex-start; margin:.45rem 0;
+    padding:.5rem; border:1px solid var(--line); border-radius:3px; background:var(--bg)}
+  .trow input, .trow textarea{
+    flex:1 1 200px; font-family:inherit; font-size:.85rem; padding:.4rem .5rem;
+    border:1px solid var(--line); border-radius:3px; background:var(--paper); color:var(--ink)}
+  .trow .tdel{flex:0 0 auto; background:none; border:1px solid var(--line); border-radius:3px;
+    color:var(--accent); padding:.3rem .55rem; font-size:.8rem}
+  .trow a.topen{flex:0 0 auto; font-size:.8rem; padding:.4rem 0}
+  .tscene{margin:0 0 1.1rem}
+  .tscene h4{margin:.2rem 0 .1rem; font-size:.92rem}
+  .btn-small{background:var(--sand-soft); border:1px solid var(--line); border-radius:3px;
+    color:var(--ink); padding:.3rem .7rem; font-size:.78rem}
+
+  /* framing panel */
+  .framing{
+    max-width:620px; margin:2.5rem auto; background:var(--paper); border:1px solid var(--line);
+    border-top:5px solid var(--accent); padding:2rem 2.2rem; border-radius:0 0 5px 5px;
+  }
+  .framing h2{font-family:var(--f-quote); font-weight:400; font-size:1.5rem}
+
+  /* print: journal export */
+  #print-journal{display:none}
+  @media print{
+    body > header.app, body > main, #vocab-pop, dialog{display:none!important}
+    #print-journal{display:block; padding:1rem; background:#fff; color:#000}
+  }
+  #print-journal h1{font-size:1.3rem; border-bottom:2px solid #000; padding-bottom:.3rem}
+  #print-journal .pj-entry{margin:.7rem 0; page-break-inside:avoid}
+  #print-journal .pj-q{font-weight:700; font-size:.9rem}
+  #print-journal .pj-a{font-family:var(--f-quote); border-left:2px solid #999; padding-left:.7rem;
+    margin:.25rem 0 0; white-space:pre-wrap}
+</style>
+
+<header class="app">
+  <div class="app-title-row">
+    <h1 class="app-title">Chain of Choices</h1>
+    <span class="app-sub">How Injustice Happens · <em>They Called Us Enemy</em> · Grade 8</span>
+    <div class="toolbar" role="group" aria-label="Settings">
+      <button id="btn-read" aria-pressed="false" title="Read sections aloud using your browser's voice">🔊 Read aloud</button>
+      <button id="btn-dys" aria-pressed="false" title="Switch to a more readable font with wider spacing">Aa Reading font</button>
+      <button id="btn-words" title="Why this app uses the words it uses">“Why these words”</button>
+      <button id="btn-journal">📓 My journal</button>
+      <button id="btn-teacher">Teacher materials</button>
+    </div>
+  </div>
+  <nav class="chain" aria-label="Scenes"></nav>
+</header>
+
+<main>
+
+<!-- ===================== FRAMING ===================== -->
+<section class="panel current" id="panel-framing">
+  <div class="framing grain">
+    <p class="eyebrow">Before you begin</p>
+    <h2>This really happened.</h2>
+    <p>Between 1942 and 1946, the United States government forced about 120,000 people of Japanese ancestry — two-thirds of them American citizens — out of their homes and into prison camps. No one was charged with a crime. One of them was a four-year-old boy named George Takei, whose memoir <em>They Called Us Enemy</em> you are reading.</p>
+    <p>In this app you will follow the <strong>chain of decisions</strong> that made this happen. It was not an accident, and it was not inevitable. At every link, people made choices — and other choices were possible.</p>
+    <p>Some of what you'll read is difficult. Go at your own pace. Your job isn't to feel bad — it's to understand <em>how</em> injustice happens, so you can recognize the pattern.</p>
+    <p style="margin-top:1.5rem"><button class="btn-primary" data-goto="s1">Begin with Scene 1 →</button></p>
+  </div>
+</section>
+
+<!-- ===================== SCENE 1 ===================== -->
+<section class="panel" id="panel-s1">
+  <div class="scene-head">
+    <p class="eyebrow">Scene 1 · Before 1941</p>
+    <h2>A Country at Peace</h2>
+  </div>
+  <button class="readbtn" data-read="panel-s1">🔊 Read this scene aloud</button>
+  <p>Before the war, more than 110,000 people of Japanese <button class="vb" data-term="ancestry">ancestry</button> lived on the West Coast. Most had been there for decades. Explore the scenes below — click each one to learn more.</p>
+  <div class="collage" id="collage1"></div>
+  <p class="note" style="margin-top:.8rem">Real photographs of these communities are held by the <a href="https://www.loc.gov" target="_blank" rel="noopener">Library of Congress</a> and <a href="https://www.archives.gov" target="_blank" rel="noopener">National Archives</a>. Your teacher can show you originals.</p>
+  <div class="prompt">
+    <label for="j-s1">✏️ List three things you notice about daily life here. What feels familiar?</label>
+    <details class="stems"><summary>Need help getting started?</summary><ul>
+      <li>I notice that…</li>
+      <li>One detail that stands out is…</li>
+      <li>Daily life here includes…</li>
+    </ul></details>
+    <textarea id="j-s1" data-jid="s1" data-jq="Scene 1 — Three things I notice about daily life before 1941:"></textarea>
+    <div class="saved"></div>
+  </div>
+  <p><button class="btn-primary" data-goto="s2">Scene 2: The Spark →</button></p>
+</section>
+
+<!-- ===================== SCENE 2 ===================== -->
+<section class="panel" id="panel-s2">
+  <div class="scene-head">
+    <p class="eyebrow">Scene 2 · The Spark</p>
+    <h2>One Event, Two Experiences</h2>
+  </div>
+  <button class="readbtn" data-read="panel-s2">🔊 Read this scene aloud</button>
+  <span class="datestamp">SUNDAY · DECEMBER 7, 1941</span>
+  <div class="card grain">
+    <div class="headline" id="headline2" aria-live="polite"></div>
+    <div class="quote" style="margin-top:.9rem">“The Japanese have attacked Pearl Harbor, Hawaii, by air, President Roosevelt has just announced.”<cite>Transcript — John Charles Daly, CBS radio bulletin, Dec. 7, 1941</cite></div>
+  </div>
+  <div class="split">
+    <div class="card">
+      <p class="eyebrow">The attack</p>
+      <p>Japan's navy launched a surprise attack on the U.S. fleet at Pearl Harbor, Hawaii. More than 2,400 Americans were killed. The next day, the United States declared war on Japan. Across the country, people were shocked, grieving, and afraid.</p>
+    </div>
+    <div class="card">
+      <p class="eyebrow">In a Japanese American home</p>
+      <p>Japanese American families heard the same bulletin — with a second fear underneath the first. Japan was now the enemy of their country, <em>and their faces looked like the enemy's</em>. Fathers were questioned by the FBI within days. Neighbors' eyes changed. Nothing they had done had changed at all.</p>
+    </div>
+  </div>
+  <div class="prompt">
+    <label for="j-s2">✏️ How might the same event feel different depending on who you are?</label>
+    <details class="stems"><summary>Need help getting started?</summary><ul>
+      <li>For a Japanese American family, this event might feel… because…</li>
+      <li>The same news could feel different because…</li>
+    </ul></details>
+    <textarea id="j-s2" data-jid="s2" data-jq="Scene 2 — How the same event can feel different depending on who you are:"></textarea>
+    <div class="saved"></div>
+  </div>
+  <p><button class="btn-primary" data-goto="s3">Scene 3: Fear Becomes Policy →</button></p>
+</section>
+
+<!-- ===================== SCENE 3 ===================== -->
+<section class="panel" id="panel-s3">
+  <div class="scene-head">
+    <p class="eyebrow">Scene 3 · December 1941 – Spring 1942</p>
+    <h2>Fear Becomes Policy</h2>
+  </div>
+  <button class="readbtn" data-read="panel-s3">🔊 Read this scene aloud</button>
+  <p>This is the heart of the story. Nothing here happened automatically. Click each link in the chain of decisions, in order. Notice the arrow between every pair of links: <strong style="color:var(--accent)">each step made the next step possible</strong> — it did not make it necessary.</p>
+  <div class="chain3-wrap">
+    <div id="chain3"></div>
+    <aside class="counter" aria-label="Counter-evidence: what the government knew">
+      <p class="eyebrow">Counter-evidence</p>
+      <h3>What the Government Knew</h3>
+      <p>Before Executive Order 9066 was signed, the government had <em>already investigated</em> Japanese Americans — twice.</p>
+      <p><strong>The Munson Report (Nov. 1941)</strong>, ordered by the White House, found “a remarkable, even extraordinary degree of loyalty” among Japanese Americans and predicted no uprising.</p>
+      <p><strong>The Ringle Report (Jan. 1942)</strong>, from Naval Intelligence, concluded Japanese Americans posed no serious threat and that any concerns should be handled <em>individually</em> — not by removing an entire group.</p>
+      <p style="border-top:1px dashed var(--gray); padding-top:.6rem"><strong>Officials had this information before the order was signed.</strong> The chain was a choice, not a reaction.</p>
+    </aside>
+  </div>
+  <div class="prompt" id="s3-final" style="display:none">
+    <label for="j-s3x">✏️ You've seen the whole chain. In your own words: how did fear become law?</label>
+    <details class="stems"><summary>Need help getting started?</summary><ul>
+      <li>The chain began with… and ended with…</li>
+      <li>Fear became law when…</li>
+    </ul></details>
+    <textarea id="j-s3x" data-jid="s3x" data-jq="Scene 3 — How fear became law (my summary of the chain):"></textarea>
+    <div class="saved"></div>
+  </div>
+  <p><button class="btn-primary" data-goto="s4" id="s3-next" disabled>Scene 4: The Order in Action →</button>
+  <span class="note" id="s3-hint">Open all five links in the chain to continue.</span></p>
+</section>
+
+<!-- ===================== SCENE 4 ===================== -->
+<section class="panel" id="panel-s4">
+  <div class="scene-head">
+    <p class="eyebrow">Scene 4 · Spring 1942</p>
+    <h2>The Order in Action</h2>
+  </div>
+  <button class="readbtn" data-read="panel-s4">🔊 Read this scene aloud</button>
+  <p>Executive Order 9066 never used the words “Japanese American.” But on the ground, it worked like this: the Army declared the West Coast a military zone and posted <button class="vb" data-term="exclusion">exclusion</button> orders on telephone poles. Click the posted notices on the diagram.</p>
+  <div class="mapbox">
+    <svg viewBox="0 0 520 340" role="img" aria-label="Simplified diagram of the West Coast showing Military Areas 1 and 2">
+      <path d="M60,10 L150,10 L150,110 L135,150 L150,200 L170,250 L200,300 L215,330 L60,330 Z" fill="var(--sand)" stroke="var(--gray)" stroke-width="1.5"/>
+      <path d="M150,10 L300,10 L300,150 L280,330 L215,330 L200,300 L170,250 L150,200 L135,150 L150,110 Z" fill="var(--sand-soft)" stroke="var(--gray)" stroke-width="1.5" stroke-dasharray="5 4"/>
+      <text x="70" y="45" font-family="Courier New,monospace" font-size="12" fill="var(--ink)">MILITARY</text>
+      <text x="70" y="60" font-family="Courier New,monospace" font-size="12" fill="var(--ink)">AREA 1</text>
+      <text x="70" y="78" font-family="Courier New,monospace" font-size="9" fill="var(--gray)">forced removal</text>
+      <text x="185" y="45" font-family="Courier New,monospace" font-size="12" fill="var(--ink)">MILITARY AREA 2</text>
+      <text x="185" y="60" font-family="Courier New,monospace" font-size="9" fill="var(--gray)">later also cleared</text>
+      <text x="185" y="72" font-family="Courier New,monospace" font-size="9" fill="var(--gray)">in California</text>
+      <text x="318" y="45" font-family="Courier New,monospace" font-size="10" fill="var(--gray)">WA · OR · CA · south AZ</text>
+      <g class="notice" data-n="0" style="cursor:pointer" tabindex="0" role="button" aria-label="Posted notice: how long did families get?"><rect x="88" y="120" width="26" height="34" fill="var(--paper)" stroke="var(--accent)" stroke-width="2"/><text x="94" y="143" font-size="14">📌</text></g>
+      <g class="notice" data-n="1" style="cursor:pointer" tabindex="0" role="button" aria-label="Posted notice: what could they bring?"><rect x="110" y="215" width="26" height="34" fill="var(--paper)" stroke="var(--accent)" stroke-width="2"/><text x="116" y="238" font-size="14">📌</text></g>
+      <g class="notice" data-n="2" style="cursor:pointer" tabindex="0" role="button" aria-label="Posted notice: what happened to everything else?"><rect x="160" y="285" width="26" height="34" fill="var(--paper)" stroke="var(--accent)" stroke-width="2"/><text x="166" y="308" font-size="14">📌</text></g>
+    </svg>
+    <p class="map-note">Simplified diagram — not to scale. Click a posted notice 📌</p>
+  </div>
+  <div class="card campdetail" id="notice-detail">
+    <p class="note">Click a notice on the diagram to see what families were told.</p>
+  </div>
+  <div class="card grain">
+    <p class="eyebrow">The Takei family's morning</p>
+    <p>In <em>They Called Us Enemy</em>, George Takei remembers soldiers with rifles arriving at his family's Los Angeles home. He was five. His father told him and his brother they were going on a vacation. Each child carried what a child could carry; everything else — the business, the car, the house — stayed behind.</p>
+  </div>
+  <div class="card grain">
+    <p class="eyebrow">Before the camps: “assembly centers”</p>
+    <p>Families were first held in temporary <button class="vb" data-term="assembly">“assembly centers”</button> — often converted racetracks and fairgrounds, surrounded by fences. The Takei family was taken to the Santa Anita racetrack, where they lived in a converted <strong>horse stall</strong>. Months later, trains took them onward — to somewhere no one would name.</p>
+  </div>
+  <div class="prompt">
+    <label for="j-s4">✏️ One suitcase per person. What would you leave behind? What can't be replaced?</label>
+    <details class="stems"><summary>Need help getting started?</summary><ul>
+      <li>I would have to leave behind…</li>
+      <li>Something that can't be replaced is… because…</li>
+    </ul></details>
+    <textarea id="j-s4" data-jid="s4" data-jq="Scene 4 — What I would leave behind; what can't be replaced:"></textarea>
+    <div class="saved"></div>
+  </div>
+  <p><button class="btn-primary" data-goto="s5">Scene 5: Life in the Camps →</button></p>
+</section>
+
+<!-- ===================== SCENE 5 ===================== -->
+<section class="panel" id="panel-s5">
+  <div class="scene-head">
+    <p class="eyebrow">Scene 5 · 1942 – 1946</p>
+    <h2>Life in the Camps</h2>
+  </div>
+  <button class="readbtn" data-read="panel-s5">🔊 Read this scene aloud</button>
+  <div class="facts-strip">
+    <div class="fact"><b>120,000+</b><span>people <button class="vb" data-term="incarceration">incarcerated</button></span></div>
+    <div class="fact"><b>2 of every 3</b><span>were U.S. citizens</span></div>
+    <div class="fact"><b>0</b><span>trials held</span></div>
+    <div class="fact"><b>0</b><span>charges filed</span></div>
+  </div>
+  <p>The War Relocation Authority ran ten camps in remote deserts and swamplands. Select a camp on the map, then turn on the Takei family's route.</p>
+  <div class="mapbox">
+    <svg id="campmap" viewBox="0 0 640 320" role="img" aria-label="Simplified map of the ten War Relocation Authority camps">
+      <rect x="8" y="8" width="624" height="304" fill="var(--sand-soft)" stroke="var(--gray)"/>
+      <path d="M8,8 L70,8 L85,120 L70,200 L110,290 L120,312 L8,312 Z" fill="var(--sand)" stroke="var(--gray)" opacity=".7"/>
+      <text x="18" y="30" font-family="Courier New,monospace" font-size="10" fill="var(--gray)">PACIFIC COAST</text>
+      <text x="560" y="30" font-family="Courier New,monospace" font-size="10" fill="var(--gray)">EAST →</text>
+      <g id="takei-route" style="display:none">
+        <path d="M96,236 L112,224 L470,262 L118,80" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-dasharray="7 5"/>
+        <circle cx="96" cy="236" r="4" fill="var(--accent)"/>
+        <text x="24" y="252" font-family="Courier New,monospace" font-size="9" fill="var(--accent)">Los Angeles →</text>
+        <text x="118" y="218" font-family="Courier New,monospace" font-size="9" fill="var(--accent)">Santa Anita</text>
+      </g>
+    </svg>
+    <p class="map-note">Simplified map — positions approximate, not to scale.</p>
+  </div>
+  <div class="card campdetail" id="camp-detail">
+    <p class="note">Select a camp dot above.</p>
+  </div>
+  <p><button class="btn-ghost" id="btn-route" aria-pressed="false">Show the Takei family's path</button></p>
+  <div class="card" id="route-panel" style="display:none">
+    <p class="eyebrow">The Takei family's path</p>
+    <p>Los Angeles → Santa Anita racetrack → <strong>Rohwer, Arkansas</strong> → <strong>Tule Lake, California</strong>.</p>
+    <p>In 1943 the government gave every adult in the camps a <button class="vb" data-term="questionnaire">“loyalty questionnaire.”</button> Question 27 asked if they would serve in the U.S. military. Question 28 asked them to “forswear allegiance” to the Emperor of Japan — as if they had ever had any. Answer <em>yes</em>, and you swore loyalty to the country imprisoning you and risked being separated from family. Answer <em>no</em>, and you were labeled disloyal.</p>
+    <p>It was an impossible choice. George's parents answered “no” to both — and the family was moved to Tule Lake, the harshest camp, a maximum-security <button class="vb" data-term="segregation">segregation</button> center.</p>
+  </div>
+  <div class="prompt">
+    <label for="j-s5">✏️ Look back at Scene 3. Which link — fear, suspicion, or political pressure — do you now see as most responsible for what you saw in this scene? Why?</label>
+    <details class="stems"><summary>Need help getting started?</summary><ul>
+      <li>I think ___ is most responsible because…</li>
+      <li>The evidence that supports this is…</li>
+    </ul></details>
+    <textarea id="j-s5" data-jid="s5" data-jq="Scene 5 — The link (fear / suspicion / pressure) most responsible, and why:"></textarea>
+    <div class="saved"></div>
+  </div>
+  <p><button class="btn-primary" data-goto="s6">Scene 6: What Was Lost, What Was Learned →</button></p>
+</section>
+
+<!-- ===================== SCENE 6 ===================== -->
+<section class="panel" id="panel-s6">
+  <div class="scene-head">
+    <p class="eyebrow">Scene 6 · 1945 and after</p>
+    <h2>What Was Lost, What Was Learned</h2>
+  </div>
+  <button class="readbtn" data-read="panel-s6">🔊 Read this scene aloud</button>
+
+  <div class="card">
+    <p class="eyebrow">Part A · What was lost</p>
+    <p>When the camps closed, there was no undo button. Families returned to find homes, farms, and businesses gone — sold off for a fraction of their worth, or simply taken. Many, like the Takeis, started over with almost nothing; George's family lived for a time on Skid Row in Los Angeles. Beyond property, there was <button class="vb" data-term="stigma">stigma</button> that followed people for decades, and a silence in many families — parents who could not bring themselves to talk about the camps, and children who inherited that silence.</p>
+  </div>
+
+  <div class="card">
+    <p class="eyebrow">Part B · Those who resisted</p>
+    <p>Remember Scene 3's question — <em>“What could have interrupted the chain?”</em> Some people tried, by name:</p>
+    <p><strong>Minoru Yasui</strong> walked into a police station in 1942 and demanded to be arrested for breaking the <button class="vb" data-term="curfew">curfew</button>, to force a court test. <strong>Gordon Hirabayashi</strong> refused both the curfew and the removal order. <strong>Fred Korematsu</strong> refused to report and was arrested. All three took their cases to the Supreme Court — and lost (1943–1944). The Court accepted the government's claim of “military necessity.”</p>
+    <p>Four decades later, researchers found proof that the government had hidden the Munson and Ringle evidence from the Supreme Court. In the 1980s, through <button class="vb" data-term="coram">coram nobis</button> cases, courts threw out all three convictions. They had been right all along — <button class="vb" data-term="vindicated">vindicated</button>, forty years late.</p>
+  </div>
+
+  <div class="card">
+    <p class="eyebrow">Part C · What was learned — slide the timeline</p>
+    <div class="timeline">
+      <input type="range" id="tl" min="0" max="4" value="0" step="1" aria-label="Timeline from 1945 to 1988">
+      <div class="tl-labels"><span>1945</span><span>1976</span><span>1983</span><span>1980s</span><span>1988</span></div>
+    </div>
+    <div class="card tl-card grain" id="tl-card"></div>
+  </div>
+
+  <div class="prompt">
+    <label for="j-s6a">✏️ Which link in the chain do you think was most preventable? What would it have taken?</label>
+    <details class="stems"><summary>Need help getting started?</summary><ul>
+      <li>The most preventable link was ___ because…</li>
+      <li>It would have taken… to stop it.</li>
+    </ul></details>
+    <textarea id="j-s6a" data-jid="s6a" data-jq="Scene 6 — The most preventable link in the chain, and what it would have taken:"></textarea>
+    <div class="saved"></div>
+  </div>
+  <div class="prompt">
+    <label for="j-s6b">✏️ What does it mean that the U.S. government later apologized? What can an apology do — and what can't it do?</label>
+    <details class="stems"><summary>Need help getting started?</summary><ul>
+      <li>The apology matters because…</li>
+      <li>The apology doesn't fully repair things because…</li>
+    </ul></details>
+    <textarea id="j-s6b" data-jid="s6b" data-jq="Scene 6 — What the government's apology means (and what it can't do):"></textarea>
+    <div class="saved"></div>
+  </div>
+  <div class="prompt">
+    <label for="j-s6c">✏️ Where do you see the same pattern — fear becoming policy — in the world today? Explain the links.</label>
+    <details class="stems"><summary>Need help getting started?</summary><ul>
+      <li>I see a similar pattern today when…</li>
+      <li>The links I see are… then… then…</li>
+    </ul></details>
+    <textarea id="j-s6c" data-jid="s6c" data-jq="Scene 6 — Where I see fear becoming policy today:"></textarea>
+    <div class="saved"></div>
+  </div>
+  <p><button class="btn-primary" data-goto="journal">Finish: review &amp; export my journal →</button></p>
+</section>
+
+<!-- ===================== JOURNAL ===================== -->
+<section class="panel" id="panel-journal">
+  <div class="scene-head">
+    <p class="eyebrow">Cause → Consequence Journal</p>
+    <h2>My Journal</h2>
+  </div>
+  <p>Everything you wrote, in one place. To turn it in: add your name, press <strong>Export as PDF</strong>, and choose “Save as PDF” in the print window.</p>
+  <p><label>Name: <input id="student-name" style="font-family:inherit; font-size:1rem; padding:.35rem .5rem; border:1px solid var(--line); border-radius:3px; background:var(--paper); color:var(--ink)"></label></p>
+  <div class="card" id="journal-list"></div>
+  <p>
+    <button class="btn-primary" id="btn-export">⤓ Export as PDF</button>
+    <button class="btn-ghost" data-goto="framing">Back to start</button>
+  </p>
+</section>
+
+<!-- ===================== TEACHER ===================== -->
+<section class="panel" id="panel-teacher">
+  <div class="scene-head">
+    <p class="eyebrow">For teachers</p>
+    <h2>Teacher Materials</h2>
+  </div>
+
+  <details class="tsec" open>
+    <summary>Lesson map &amp; pacing</summary>
+    <div class="inner tablewrap">
+      <table class="plain">
+        <tr><th></th><th>6-day pacing</th><th>3-day pacing</th></tr>
+        <tr><td><b>Framing + Scene 1</b> — A Country at Peace</td><td>Day 1</td><td rowspan="2">Day 1</td></tr>
+        <tr><td><b>Scene 2</b> — The Spark</td><td>Day 2</td></tr>
+        <tr><td><b>Scene 3</b> — Fear Becomes Policy (core interactive)</td><td>Day 3</td><td rowspan="2">Day 2</td></tr>
+        <tr><td><b>Scene 4</b> — The Order in Action</td><td>Day 4</td></tr>
+        <tr><td><b>Scene 5</b> — Life in the Camps</td><td>Day 5</td><td rowspan="2">Day 3</td></tr>
+        <tr><td><b>Scene 6</b> + journal export</td><td>Day 6</td></tr>
+      </table>
+      <p class="note">Scene 3 is the model's signature moment — protect a full class period for it if you can. The app is designed for background-knowledge building, so it works before, during, or alongside your class's reading of <em>They Called Us Enemy</em>.</p>
+    </div>
+  </details>
+
+  <details class="tsec">
+    <summary>Standards alignment (editable)</summary>
+    <div class="inner">
+      <p class="note">Pre-filled with CCSS-ELA defaults. Click into any field and replace with your state's standards. Changes save on this device — use “Save / load my customizations” below to keep a backup.</p>
+      <div id="std-rows"></div>
+      <p><button class="btn-small" id="std-add">＋ Add standard</button></p>
+    </div>
+  </details>
+
+  <details class="tsec">
+    <summary>Activity links per scene (editable)</summary>
+    <div class="inner">
+      <p class="note">Attach your own resources to each scene — a slideshow, a Densho page, an archive photo set. Label + URL; links open in a new tab.</p>
+      <div id="scene-links"></div>
+    </div>
+  </details>
+
+  <details class="tsec">
+    <summary>Save / load my customizations</summary>
+    <div class="inner">
+      <p class="note">Your standards and activity links live in this browser only, and browser storage can be cleared. After editing, download a backup file — re-import it to restore your setup or move it to another computer.</p>
+      <p>
+        <button class="btn-primary" id="teacher-export">⤓ Download settings (JSON)</button>
+        <button class="btn-ghost" id="teacher-import">Import settings…</button>
+        <input type="file" id="teacher-file" accept=".json,application/json" style="display:none">
+      </p>
+      <p class="note" id="teacher-io-msg" role="status"></p>
+    </div>
+  </details>
+
+  <details class="tsec">
+    <summary>Vocabulary bank (Tier 1 / 2 / 3) + euphemism pairs</summary>
+    <div class="inner tablewrap">
+      <table class="plain">
+        <tr><th>Tier 1</th><th>Tier 2</th><th>Tier 3</th></tr>
+        <tr>
+          <td>war, camp, fear, law, rumor, apology</td>
+          <td>ancestry, exclusion, curfew, stereotype, stigma, rescind, vindicated, segregation, civilian</td>
+          <td>executive order, incarceration, reparations, xenophobia, espionage, sabotage, proclamation, coram nobis</td>
+        </tr>
+      </table>
+      <p style="margin-top:1rem"><strong>Euphemism ↔ accurate-term pairs</strong> (teach explicitly; also in the student-facing “Why these words” layer):</p>
+      <table class="plain">
+        <tr><th>Government's term</th><th>Accurate term</th></tr>
+        <tr><td>evacuation</td><td>forced removal</td></tr>
+        <tr><td>relocation</td><td>forced removal / incarceration</td></tr>
+        <tr><td>assembly center</td><td>temporary detention site</td></tr>
+        <tr><td>internment</td><td>incarceration (per Densho/JANM terminology guidance)</td></tr>
+        <tr><td>non-alien</td><td>U.S. citizen</td></tr>
+      </table>
+      <p class="note" style="margin-top:.8rem"><strong>EL/ML support:</strong> every in-app vocabulary pop-up includes a plain-language line for multilingual learners; preview Tier 3 terms before Scene 3. <strong>Core Support:</strong> the read-aloud toggle, the reading-font toggle, and sentence starters ("One link in the chain was… It made ___ possible because…") give all students a way into the same content — same chain, multiple entry points.</p>
+    </div>
+  </details>
+
+  <details class="tsec">
+    <summary>Discussion prompts per scene</summary>
+    <div class="inner">
+      <ul style="max-width:66ch">
+        <li><b>Scene 1:</b> Why does the "before" picture matter for understanding an injustice?</li>
+        <li><b>Scene 2:</b> When something frightening happens to a country, who gets to be "us," and who gets turned into "them"?</li>
+        <li><b>Scene 3:</b> The government had the Munson and Ringle reports. Why might leaders act against their own evidence? Who was rewarded for it?</li>
+        <li><b>Scene 4:</b> The exclusion orders said "non-alien" instead of "citizen." What work is that word doing?</li>
+        <li><b>Scene 5:</b> Why were the questionnaire's two questions impossible to answer safely? Design a fairer version.</li>
+        <li><b>Scene 6:</b> Yasui, Hirabayashi, and Korematsu lost in 1943–44 and won in the 1980s. Was their resistance a failure in 1944? What counts as "interrupting the chain"?</li>
+      </ul>
+    </div>
+  </details>
+
+  <details class="tsec">
+    <summary>Images, sourcing &amp; assessment</summary>
+    <div class="inner">
+      <p><strong>Images:</strong> WRA-era photographs (Dorothea Lange and others) are public domain via the <a href="https://www.archives.gov" target="_blank" rel="noopener">National Archives</a> and <a href="https://www.loc.gov" target="_blank" rel="noopener">Library of Congress</a>. This app deliberately links out rather than embedding. <a href="https://densho.org" target="_blank" rel="noopener">Densho.org</a> is the recommended source for terminology and primary documents.</p>
+      <p><strong>Memoir content:</strong> the app retells key Takei family moments briefly in its own words (fair use) so it can build background knowledge independently of where your class is in the book.</p>
+      <p><strong>Assessment (v1):</strong> students export their auto-generated Cause → Consequence journal as a PDF and submit it as the summative artifact. A teacher dashboard is a future LMS-integrated option only.</p>
+    </div>
+  </details>
+  <p><button class="btn-ghost" data-goto="framing">← Back to app</button></p>
+</section>
+
+</main>
+
+<div id="vocab-pop" role="tooltip"></div>
+
+<dialog id="words-modal">
+  <p class="eyebrow">Language matters</p>
+  <h2 style="font-family:var(--f-quote); font-weight:400">Why we use these words</h2>
+  <p>The government chose soft, official words for what it did. Historians — and this app — use accurate ones. This follows the guidance of <a href="https://densho.org" target="_blank" rel="noopener">Densho</a> and the Japanese American National Museum.</p>
+  <div class="tablewrap">
+  <table class="words">
+    <tr><th>The government said…</th><th>What actually happened</th></tr>
+    <tr><td class="official">evacuation</td><td class="accurate">forced removal</td></tr>
+    <tr><td class="official">relocation</td><td class="accurate">forced removal, incarceration</td></tr>
+    <tr><td class="official">assembly center</td><td class="accurate">temporary detention site</td></tr>
+    <tr><td class="official">internment</td><td class="accurate">incarceration</td></tr>
+    <tr><td class="official">non-alien</td><td class="accurate">U.S. citizen</td></tr>
+  </table>
+  </div>
+  <p class="note">“Evacuation” is what you do to protect people from a flood. These families weren't being protected — they were being imprisoned. When you read a source in this unit, ask: <em>who chose this word, and what does it hide?</em></p>
+  <form method="dialog"><button class="btn-primary">Close</button></form>
+</dialog>
+
+<div id="print-journal" aria-hidden="true"></div>
+
+<script>
+(function(){
+  "use strict";
+  var store = {
+    get:function(k,d){ try{ var v=localStorage.getItem("coc-"+k); return v===null?d:JSON.parse(v);}catch(e){return d} },
+    set:function(k,v){ try{ localStorage.setItem("coc-"+k, JSON.stringify(v)); }catch(e){} }
+  };
+  function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+
+  /* ---------- scenes / nav ---------- */
+  var SCENES=[
+    {id:"s1", label:"A Country at Peace"},
+    {id:"s2", label:"The Spark"},
+    {id:"s3", label:"Fear Becomes Policy"},
+    {id:"s4", label:"The Order in Action"},
+    {id:"s5", label:"Life in the Camps"},
+    {id:"s6", label:"Lost & Learned"}
+  ];
+  var visited = store.get("visited", {});
+  var chainNav = document.querySelector("nav.chain");
+
+  function renderChainNav(currentId){
+    chainNav.innerHTML="";
+    SCENES.forEach(function(s,i){
+      var wrap=document.createElement("span"); wrap.className="chain-link";
+      var b=document.createElement("button");
+      b.innerHTML='<span class="n">'+(i+1)+'</span>'+s.label;
+      if(visited[s.id]) b.classList.add("visited");
+      if(s.id===currentId) b.classList.add("active");
+      b.setAttribute("aria-label","Scene "+(i+1)+": "+s.label+(visited[s.id]?" (visited)":""));
+      b.addEventListener("click",function(){ show(s.id); });
+      wrap.appendChild(b);
+      chainNav.appendChild(wrap);
+      if(i<SCENES.length-1){
+        var c=document.createElement("span");
+        c.className="chain-connector"+((visited[s.id]&&visited[SCENES[i+1].id])?" done":"");
+        chainNav.appendChild(c);
+      }
+    });
+  }
+
+  var current="framing";
+  function show(id){
+    var el=document.getElementById("panel-"+id);
+    if(!el) return;
+    document.querySelectorAll("section.panel").forEach(function(p){p.classList.remove("current")});
+    el.classList.add("current");
+    current=id;
+    stopSpeech();
+    if(SCENES.some(function(s){return s.id===id})){ visited[id]=true; store.set("visited",visited); }
+    renderChainNav(id);
+    window.scrollTo({top:0});
+    if(id==="s2") typewriter();
+    if(id==="journal") renderJournal();
+  }
+  document.querySelectorAll("[data-goto]").forEach(function(b){
+    b.addEventListener("click",function(){ show(b.getAttribute("data-goto")); });
+  });
+
+  /* ---------- settings ---------- */
+  var btnRead=document.getElementById("btn-read"), btnDys=document.getElementById("btn-dys");
+  function applySettings(){
+    var dys=store.get("dys",false), ra=store.get("readaloud",false);
+    document.body.classList.toggle("dyslexia",dys);
+    document.body.classList.toggle("readaloud",ra);
+    btnDys.setAttribute("aria-pressed",String(dys));
+    btnRead.setAttribute("aria-pressed",String(ra));
+  }
+  btnDys.addEventListener("click",function(){ store.set("dys",!store.get("dys",false)); applySettings(); });
+  btnRead.addEventListener("click",function(){
+    var on=!store.get("readaloud",false);
+    store.set("readaloud",on); applySettings();
+    if(!on) stopSpeech();
+  });
+  applySettings();
+
+  /* ---------- read aloud (Web Speech API) ---------- */
+  function stopSpeech(){ if(window.speechSynthesis) speechSynthesis.cancel(); }
+  document.querySelectorAll(".readbtn").forEach(function(b){
+    b.addEventListener("click",function(){
+      if(!window.speechSynthesis){ b.textContent="Read-aloud not supported in this browser"; return; }
+      stopSpeech();
+      var panel=document.getElementById(b.getAttribute("data-read"));
+      var clone=panel.cloneNode(true);
+      clone.querySelectorAll("textarea,.readbtn,.note,.saved,svg").forEach(function(n){n.remove()});
+      var u=new SpeechSynthesisUtterance(clone.textContent.replace(/\s+/g," ").trim());
+      u.rate=0.95;
+      speechSynthesis.speak(u);
+    });
+  });
+  document.getElementById("btn-words").addEventListener("click",function(){
+    document.getElementById("words-modal").showModal();
+  });
+  document.getElementById("btn-journal").addEventListener("click",function(){ show("journal"); });
+  document.getElementById("btn-teacher").addEventListener("click",function(){ show("teacher"); });
+
+  /* ---------- vocabulary ---------- */
+  var VOCAB={
+    ancestry:{t:2,d:"The family line you come from — your parents, grandparents, and the generations before them.",el:"Where your family comes from."},
+    exclusion:{t:2,d:"Shutting people out of a place or group. The 'Civilian Exclusion Orders' forced Japanese Americans out of their neighborhoods.",el:"Keeping people out."},
+    incarceration:{t:3,d:"Imprisonment — locking people up. Historians use this word for the camps because people could not leave.",el:"Being put in prison."},
+    reparations:{t:3,d:"Payment made to repair a wrong the government committed.",el:"Money paid to say: we did wrong to you."},
+    xenophobia:{t:3,d:"Fear or hatred of people seen as foreign or 'other.'",el:"Fear of people from other countries."},
+    espionage:{t:3,d:"Spying — secretly gathering information for an enemy.",el:"Spying."},
+    sabotage:{t:3,d:"Secretly destroying equipment or plans to hurt an enemy from the inside.",el:"Secretly breaking things to hurt a country."},
+    proclamation:{t:3,d:"An official public announcement with legal force.",el:"An official announcement."},
+    stereotype:{t:2,d:"An unfair, oversimplified belief about a whole group of people.",el:"An unfair idea about a whole group."},
+    curfew:{t:2,d:"A rule requiring people to stay indoors during set hours. In 1942 it applied to Japanese Americans only.",el:"A rule: stay home at night."},
+    stigma:{t:2,d:"A mark of shame that society attaches to a person or group, even when they did nothing wrong.",el:"When people treat you as shameful unfairly."},
+    coram:{t:3,d:"Coram nobis: a legal action asking a court to correct its own old judgment because key facts were hidden from it.",el:"Asking a court to fix an old wrong decision."},
+    vindicated:{t:2,d:"Proven right after being doubted or blamed.",el:"Shown to be right in the end."},
+    segregation:{t:2,d:"Forcibly separating one group of people from others.",el:"Keeping one group apart from everyone."},
+    questionnaire:{t:2,d:"A written list of questions. The 1943 'loyalty questionnaire' forced impossible answers — see this panel.",el:"A paper full of questions."},
+    assembly:{t:3,d:"'Assembly center' was the government's term for temporary detention sites — often racetracks and fairgrounds behind fences. Accurate term: temporary detention site.",el:"The government's soft word for a fenced holding place."},
+    rescind:{t:2,d:"To officially cancel an order or law.",el:"To cancel officially."}
+  };
+  var pop=document.getElementById("vocab-pop");
+  function hidePop(){ pop.style.display="none"; }
+  document.addEventListener("click",function(e){
+    var b=e.target.closest(".vb");
+    if(!b){ hidePop(); return; }
+    var v=VOCAB[b.getAttribute("data-term")];
+    if(!v){ hidePop(); return; }
+    pop.innerHTML='<span class="tier">Tier '+v.t+' word</span>'+esc(v.d)+'<span class="el">In other words: '+esc(v.el)+'</span>';
+    pop.style.display="block";
+    var r=b.getBoundingClientRect();
+    var left=Math.min(r.left+window.scrollX, window.scrollX+document.documentElement.clientWidth-300);
+    pop.style.left=Math.max(8,left)+"px";
+    pop.style.top=(r.bottom+window.scrollY+8)+"px";
+  });
+  window.addEventListener("scroll",hidePop);
+
+  /* ---------- journal ---------- */
+  var PROMPT_ORDER=["s1","s2","n1","n2","n3","n4","n5","s3x","s4","s5","s6a","s6b","s6c"];
+  var journal=store.get("journal",{});
+  function bindPrompts(root){
+    (root||document).querySelectorAll("textarea[data-jid]").forEach(function(t){
+      if(t.dataset.bound) return;
+      t.dataset.bound="1";
+      var id=t.getAttribute("data-jid");
+      if(journal[id] && journal[id].a) t.value=journal[id].a;
+      var savedEl=t.parentElement.querySelector(".saved"), timer=null;
+      t.addEventListener("input",function(){
+        journal[id]={q:t.getAttribute("data-jq"), a:t.value};
+        store.set("journal",journal);
+        if(savedEl){ savedEl.textContent="SAVED TO JOURNAL ✓";
+          clearTimeout(timer); timer=setTimeout(function(){savedEl.textContent=""},1800); }
+      });
+    });
+  }
+  bindPrompts();
+
+  function journalEntries(){
+    var out=[];
+    PROMPT_ORDER.forEach(function(id){
+      var e=journal[id];
+      if(e&&e.q) out.push(e);
+    });
+    return out;
+  }
+  function renderJournal(){
+    var list=document.getElementById("journal-list");
+    var es=journalEntries();
+    if(!es.length){ list.innerHTML='<p class="note">Nothing here yet — your answers appear automatically as you write them in each scene.</p>'; return; }
+    list.innerHTML=es.map(function(e){
+      return '<div class="jentry"><div class="jq">'+esc(e.q)+'</div>'+
+        (e.a.trim()?'<div class="ja">'+esc(e.a)+'</div>':'<div class="empty">(not answered yet)</div>')+'</div>';
+    }).join("");
+  }
+  var nameInput=document.getElementById("student-name");
+  nameInput.value=store.get("name","");
+  nameInput.addEventListener("input",function(){ store.set("name",nameInput.value); });
+
+  document.getElementById("btn-export").addEventListener("click",function(){
+    var pj=document.getElementById("print-journal");
+    var es=journalEntries();
+    pj.innerHTML='<h1>Cause → Consequence Journal</h1>'+
+      '<p><b>Name:</b> '+esc(nameInput.value||"____________")+' &nbsp; <b>Text:</b> <i>They Called Us Enemy</i> by George Takei &nbsp; <b>Date:</b> '+new Date().toLocaleDateString()+'</p>'+
+      (es.length?es.map(function(e){ return '<div class="pj-entry"><div class="pj-q">'+esc(e.q)+'</div><div class="pj-a">'+(e.a.trim()?esc(e.a):"(blank)")+'</div></div>'; }).join("")
+        :'<p>(No journal entries yet.)</p>');
+    window.print();
+  });
+
+  /* ---------- scene 1 collage ---------- */
+  var COLLAGE=[
+    {icon:"🌾", t:"Family farms", cap:"Japanese American farmers grew much of California's produce — strawberries, celery, flowers — often on land they were legally barred from owning."},
+    {icon:"🎣", t:"Fishing fleets", cap:"On Terminal Island near Los Angeles, whole villages worked the tuna boats and canneries."},
+    {icon:"🧺", t:"Storefronts", cap:"The Takei family ran a dry-cleaning business in Los Angeles. George's father was proud of building it from nothing."},
+    {icon:"🏫", t:"Schoolchildren", cap:"Nisei kids — American-born citizens — pledged allegiance every morning, played the same games, and read the same books as their classmates."},
+    {icon:"⛩️", t:"Temples & churches", cap:"Buddhist temples and Christian churches anchored community life — festivals, weddings, language school on Saturdays."},
+    {icon:"⚾", t:"Baseball leagues", cap:"Japanese American baseball leagues drew big weekend crowds. Baseball was the community's favorite — and most American — pastime."}
+  ];
+  var cWrap=document.getElementById("collage1");
+  COLLAGE.forEach(function(c){
+    var b=document.createElement("button");
+    b.className="hotspot grain";
+    b.setAttribute("aria-expanded","false");
+    b.innerHTML='<div class="ph">'+c.icon+'</div><div class="t">'+c.t+'</div><div class="cap">'+c.cap+'</div>';
+    b.addEventListener("click",function(){
+      var open=b.classList.toggle("open");
+      b.setAttribute("aria-expanded",String(open));
+    });
+    cWrap.appendChild(b);
+  });
+
+  /* ---------- scene 2 typewriter ---------- */
+  var typed=false;
+  function typewriter(){
+    if(typed) return; typed=true;
+    var el=document.getElementById("headline2");
+    var text="JAPAN ATTACKS PEARL HARBOR";
+    var reduce=window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if(reduce){ el.textContent=text; return; }
+    var i=0; el.innerHTML='<span class="cursor">&nbsp;</span>';
+    var iv=setInterval(function(){
+      i++;
+      el.innerHTML=esc(text.slice(0,i))+'<span class="cursor">&nbsp;</span>';
+      if(i>=text.length){ clearInterval(iv); setTimeout(function(){ el.textContent=text; },1200); }
+    },70);
+  }
+
+  /* ---------- scene 3 chain ---------- */
+  var NODES=[
+    {id:"n1", title:"Fear", sub:"December 1941 — public anxiety after Pearl Harbor",
+     body:"After the attack, the West Coast braced for invasion. Cities held blackout drills; sirens went off over false alarms. Fear was everywhere — and fear looks for somewhere to land.",
+     src:"West Coast newspapers printed false reports of enemy ships offshore and secret signals sent from the coast. None were ever verified — but each one was a front-page headline.",
+     cite:"Reported panics, Dec. 1941 – Jan. 1942; later reviewed and debunked",
+     q:"Is fear itself a decision? Who decides what a country does with its fear?",
+     stems:["I think fear is / is not a decision because…","A country decides what to do with its fear when…"]},
+    {id:"n2", title:"Suspicion", sub:"Winter 1942 — rumors, headlines, racial stereotypes",
+     body:"Fear turned into suspicion of one group. Newspapers and radio voices claimed — with no evidence — that Japanese Americans were secretly loyal to Japan. The suspicion was about ancestry, not actions: no comparable mass removal happened to German or Italian Americans as a group.",
+     src:"“A viper is nonetheless a viper wherever the egg is hatched — so a Japanese-American, born of Japanese parents, grows up to be a Japanese, not an American.”",
+     cite:"W. H. Anderson, Los Angeles Times column, Feb. 2, 1942 — shown as evidence of the era's prejudice",
+     q:"Who benefits when a rumor spreads? Who pays for it?",
+     stems:["When a rumor spreads, ___ benefits because…","The people who pay for the rumor are… because…"]},
+    {id:"n3", title:"Political Pressure", sub:"Jan–Feb 1942 — officials call for removal",
+     body:"Military leaders and West Coast politicians demanded action. Lt. Gen. John DeWitt, the Army commander for the West Coast, argued that the very absence of evidence proved the danger — reasoning under which Japanese Americans were guilty no matter what they did.",
+     src:"“The very fact that no sabotage has taken place to date is a disturbing and confirming indication that such action will be taken.”",
+     cite:"Lt. Gen. John L. DeWitt, memorandum to the Secretary of War, Feb. 14, 1942",
+     q:"What's the difference between leading and following public fear?",
+     stems:["A leader who follows public fear is different from one who leads because…","Leading would have looked like…"]},
+    {id:"n4", title:"Executive Order 9066", sub:"February 19, 1942 — signed by President Roosevelt",
+     body:"President Franklin D. Roosevelt signed Executive Order 9066. It never mentions Japanese Americans by name — it simply hands the military power to exclude “any or all persons” from “military areas.” Everyone knew who it meant. Check the counter-evidence panel: the White House already had the Munson Report.",
+     src:"“I hereby authorize and direct the Secretary of War… to prescribe military areas… from which any or all persons may be excluded.”",
+     cite:"Executive Order 9066, Feb. 19, 1942 — National Archives",
+     q:"What could have interrupted the chain here? (Scene 6 will answer this with real names.)",
+     stems:["The chain could have been interrupted here if…","Someone who could have said no was… because…"]},
+    {id:"n5", title:"Legal Framework", sub:"Spring 1942 — proclamations and exclusion orders",
+     body:"The order became machinery: Public Proclamations drew Military Areas 1 and 2 on the map, and 108 Civilian Exclusion Orders — posted on poles and storefronts — removed Japanese Americans neighborhood by neighborhood. Unfairness now wore the uniform of law: official, numbered, signed.",
+     src:"“Instructions to All Persons of Japanese Ancestry… all persons of Japanese ancestry, both alien and non-alien, will be evacuated…” — Notice the words: “non-alien” means citizen, and “evacuated” means forcibly removed.",
+     cite:"Civilian Exclusion Order poster text, spring 1942",
+     q:"What happens when unfair rules become official law? Who is still allowed to say no?",
+     stems:["When unfair rules become law, …","Saying no becomes harder because…"]}
+  ];
+  var chainEl=document.getElementById("chain3");
+  var openedNodes=store.get("s3opened",{});
+  function nodeUnlocked(i){ return i===0 || !!openedNodes[NODES[i-1].id]; }
+  function renderChain3(){
+    chainEl.innerHTML="";
+    NODES.forEach(function(n,i){
+      var d=document.createElement("div");
+      var opened=!!openedNodes[n.id], unlocked=nodeUnlocked(i);
+      d.className="node "+(opened?"opened open":(unlocked?"unlocked":"locked"));
+      d.innerHTML=
+        '<button class="nhead" aria-expanded="'+opened+'" '+(unlocked?"":"disabled")+'>'+
+          '<span class="num">'+(i+1)+'</span>'+
+          '<span><span class="ntitle">'+n.title+'</span><span class="nsub">'+n.sub+'</span></span>'+
+          (unlocked?'':'<span class="lock">🔒 open link '+i+' first</span>')+
+        '</button>'+
+        '<div class="nbody">'+
+          '<p>'+n.body+'</p>'+
+          '<div class="quote">'+n.src+'<cite>'+n.cite+'</cite></div>'+
+          '<div class="prompt" style="margin:.8rem 0 0"><label for="j-'+n.id+'">✏️ '+n.q+'</label>'+
+          '<details class="stems"><summary>Need help getting started?</summary><ul>'+
+            n.stems.map(function(s){return '<li>'+esc(s)+'</li>'}).join("")+
+          '</ul></details>'+
+          '<textarea id="j-'+n.id+'" data-jid="'+n.id+'" data-jq="Scene 3 · '+n.title+' — '+n.q+'"></textarea>'+
+          '<div class="saved"></div></div>'+
+        '</div>';
+      d.querySelector(".nhead").addEventListener("click",function(){
+        if(!nodeUnlocked(i)) return;
+        if(!openedNodes[n.id]){
+          openedNodes[n.id]=true; store.set("s3opened",openedNodes);
+          renderChain3(); return;
+        }
+        d.classList.toggle("open");
+        d.querySelector(".nhead").setAttribute("aria-expanded",String(d.classList.contains("open")));
+      });
+      chainEl.appendChild(d);
+      if(i<NODES.length-1){
+        var lit=!!openedNodes[n.id];
+        var a=document.createElement("div");
+        a.className="arrow"+(lit?" lit":"");
+        a.innerHTML='<svg width="26" height="30" viewBox="0 0 26 30" aria-hidden="true"><path d="M13 1 C10 8, 16 14, 13 22" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><path d="M7 20 L13 29 L19 20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>'+
+          '<span class="alabel">This made the next step possible</span>';
+        chainEl.appendChild(a);
+      }
+    });
+    bindPrompts(chainEl);
+    var all=NODES.every(function(n){return openedNodes[n.id]});
+    document.getElementById("s3-next").disabled=!all;
+    document.getElementById("s3-hint").style.display=all?"none":"inline";
+    document.getElementById("s3-final").style.display=all?"block":"none";
+  }
+  renderChain3();
+
+  /* ---------- scene 4 notices ---------- */
+  var NOTICES=[
+    {h:"How long did families get?", p:"Most Civilian Exclusion Orders gave families roughly six days to a week to report. In that time: close a business, empty a house, find someone to take the dog. Everything you couldn't carry or store, you lost."},
+    {h:"What could they bring?", p:"“Only what you can carry” — in practice, about one suitcase or bundle per person: bedding, clothes, plates. No pets. George Takei's mother packed a suitcase of treats for her children — and her forbidden sewing machine."},
+    {h:"What happened to everything else?", p:"Homes, farms, cars, and businesses were sold in days — at massive loss — or left behind and never recovered. Buyers knew the families had no choice, and priced accordingly."}
+  ];
+  var noticeDetail=document.getElementById("notice-detail");
+  document.querySelectorAll(".notice").forEach(function(g){
+    function open(){
+      var n=NOTICES[+g.getAttribute("data-n")];
+      noticeDetail.innerHTML='<p class="eyebrow">Posted notice</p><h3>'+n.h+'</h3><p>'+n.p+'</p>';
+    }
+    g.addEventListener("click",open);
+    g.addEventListener("keydown",function(e){ if(e.key==="Enter"||e.key===" "){e.preventDefault();open();} });
+  });
+
+  /* ---------- scene 5 camps ---------- */
+  var CAMPS=[
+    {n:"Tule Lake", x:118, y:80, st:"California", peak:"18,789 — the largest", clim:"High desert; dust, harsh winters",
+     cond:"After 1943, the maximum-security segregation center: more guards, more fences, a stockade. The Takei family was sent here after the loyalty questionnaire.", takei:true},
+    {n:"Manzanar", x:150, y:190, st:"California", peak:"10,046", clim:"Owens Valley desert; extreme heat, cold, and dust storms",
+     cond:"Tar-paper barracks, communal latrines with no partitions, guard towers with searchlights."},
+    {n:"Poston", x:190, y:250, st:"Arizona", peak:"17,814", clim:"Sonoran desert; summers above 110°F",
+     cond:"Three camp units on tribal land, built over the objection of the Colorado River Indian Tribes' council."},
+    {n:"Gila River", x:240, y:268, st:"Arizona", peak:"13,348", clim:"Desert heat; scorpions and rattlesnakes",
+     cond:"Also on tribal land. Barracks were so hot that families slept outdoors."},
+    {n:"Minidoka", x:230, y:95, st:"Idaho", peak:"9,397", clim:"Sagebrush plain; dust in summer, deep freeze in winter",
+     cond:"Barbed wire and a swift canal along the boundary; many young men were later drafted into the Army from here."},
+    {n:"Heart Mountain", x:315, y:85, st:"Wyoming", peak:"10,767", clim:"High plains; winters far below zero",
+     cond:"Site of the largest organized draft resistance — 63 young men tried together in 1944 for refusing to be drafted from behind barbed wire."},
+    {n:"Topaz", x:245, y:160, st:"Utah", peak:"8,130", clim:"Alkaline desert; blinding dust",
+     cond:"In 1943 a guard shot and killed 63-year-old James Wakasa near the fence. The whole camp grieved together."},
+    {n:"Granada (Amache)", x:370, y:185, st:"Colorado", peak:"7,318 — the smallest", clim:"Windswept prairie",
+     cond:"Despite everything, incarcerees ran a silk-screen shop, a co-op store, and champion sports teams."},
+    {n:"Rohwer", x:470, y:262, st:"Arkansas", peak:"8,475", clim:"Swampland; mud, mosquitoes, summer heat",
+     cond:"The Takei family's first camp. George started school here — pledging allegiance to the flag each morning inside a prison camp.", takei:true},
+    {n:"Jerome", x:452, y:290, st:"Arkansas", peak:"8,497", clim:"Swampland like Rohwer",
+     cond:"Opened last and closed first, in 1944."}
+  ];
+  var mapSvg=document.getElementById("campmap"), campDetail=document.getElementById("camp-detail");
+  CAMPS.forEach(function(c){
+    var g=document.createElementNS("http://www.w3.org/2000/svg","g");
+    g.setAttribute("class","camp-dot"); g.setAttribute("tabindex","0"); g.setAttribute("role","button");
+    g.setAttribute("aria-label",c.n+", "+c.st);
+    g.innerHTML='<circle cx="'+c.x+'" cy="'+c.y+'" r="7"/><text x="'+(c.x+10)+'" y="'+(c.y+4)+'">'+c.n+'</text>';
+    function sel(){
+      document.querySelectorAll(".camp-dot").forEach(function(d){d.classList.remove("sel")});
+      g.classList.add("sel");
+      campDetail.innerHTML='<p class="eyebrow">'+esc(c.st)+(c.takei?' · TAKEI FAMILY':'')+'</p><h3>'+esc(c.n)+'</h3>'+
+        '<div class="facts-strip"><div class="fact"><b>'+esc(c.peak)+'</b><span>peak population</span></div>'+
+        '<div class="fact"><b style="font-size:.85rem">'+esc(c.clim)+'</b><span>location &amp; climate</span></div></div>'+
+        '<p>'+c.cond+'</p>'+
+        '<p class="note">Every camp: barbed wire, guard towers, one room per family, communal latrines, and dust that got into everything.</p>';
+    }
+    g.addEventListener("click",sel);
+    g.addEventListener("keydown",function(e){ if(e.key==="Enter"||e.key===" "){e.preventDefault();sel();} });
+    mapSvg.appendChild(g);
+  });
+  var routeOn=false;
+  document.getElementById("btn-route").addEventListener("click",function(){
+    routeOn=!routeOn;
+    document.getElementById("takei-route").style.display=routeOn?"block":"none";
+    document.getElementById("route-panel").style.display=routeOn?"block":"none";
+    this.setAttribute("aria-pressed",String(routeOn));
+    this.textContent=routeOn?"Hide the Takei family's path":"Show the Takei family's path";
+  });
+
+  /* ---------- scene 6 timeline ---------- */
+  var TL=[
+    {y:"1945–46", h:"The camps close", p:"The war ends and the camps shut down; Tule Lake, the last, closes in March 1946. Each person is released with a train ticket and $25. For most families, what was lost stayed lost."},
+    {y:"1976", h:"President Ford rescinds E.O. 9066", p:"On the order's anniversary, President Gerald Ford formally rescinds it, calling the incarceration a “national mistake”: “An honest reckoning must include a recognition of our national mistakes as well as our national achievements.”"},
+    {y:"1983", h:"“Personal Justice Denied”", p:"A federal commission, after hearing more than 750 witnesses, concludes the incarceration was not justified by military necessity — its causes were “race prejudice, war hysteria, and a failure of political leadership.” Notice: that is the chain from Scene 3, named by the government itself."},
+    {y:"1983–1987", h:"The courts correct themselves", p:"Using the hidden-evidence findings, federal courts vacate the convictions of Fred Korematsu (1983), Minoru Yasui (1984), and Gordon Hirabayashi (1987). Coram nobis — the record, corrected."},
+    {y:"1988", h:"The Civil Liberties Act", p:"Congress passes and President Reagan signs the Civil Liberties Act of 1988: a formal apology from the United States and $20,000 in reparations to each surviving incarceree. An apology 46 years late — and an admission, in law, that the chain had been a choice."}
+  ];
+  var tl=document.getElementById("tl"), tlCard=document.getElementById("tl-card");
+  function renderTL(){
+    var e=TL[+tl.value];
+    tlCard.innerHTML='<span class="datestamp">'+e.y+'</span><h3>'+e.h+'</h3><p>'+e.p+'</p>';
+  }
+  tl.addEventListener("input",renderTL);
+  renderTL();
+
+  /* ---------- teacher: editable standards + activity links ---------- */
+  var DEFAULT_STANDARDS=[
+    {std:"CCSS RI.8.3 — analyze how a text makes connections among and distinctions between individuals, ideas, and events",
+     loc:"Scene 3 chain of decisions; Scene 5 \"which link\" prompt"},
+    {std:"CCSS RI.8.6 — determine point of view/purpose; how the author acknowledges and responds to conflicting evidence",
+     loc:"\"Why these words\" euphemism layer; counter-evidence panel (Munson/Ringle)"},
+    {std:"CCSS RH.6-8.2 — determine central ideas of a primary or secondary source",
+     loc:"Primary-source snippets at every Scene 3 node; EO 9066 and exclusion-order text"}
+  ];
+  function defaultTeacher(){
+    return {standards:JSON.parse(JSON.stringify(DEFAULT_STANDARDS)), links:{}};
+  }
+  var teacher=store.get("teacher",null);
+  if(!teacher || !Array.isArray(teacher.standards) || typeof teacher.links!=="object") teacher=defaultTeacher();
+  function saveTeacher(){ store.set("teacher",teacher); }
+
+  function mkInput(value,placeholder,onchange){
+    var i=document.createElement("input");
+    i.type="text"; i.value=value||""; i.placeholder=placeholder;
+    i.addEventListener("input",function(){ onchange(i.value); saveTeacher(); });
+    return i;
+  }
+  function mkDel(label,onclick){
+    var b=document.createElement("button");
+    b.className="tdel"; b.textContent="✕"; b.setAttribute("aria-label",label);
+    b.title=label;
+    b.addEventListener("click",function(){ onclick(); saveTeacher(); });
+    return b;
+  }
+
+  var stdRows=document.getElementById("std-rows");
+  function renderStandards(){
+    stdRows.innerHTML="";
+    teacher.standards.forEach(function(s,i){
+      var row=document.createElement("div"); row.className="trow";
+      row.appendChild(mkInput(s.std,"Standard (code + description)",function(v){s.std=v;}));
+      row.appendChild(mkInput(s.loc,"Where it lives in the app",function(v){s.loc=v;}));
+      row.appendChild(mkDel("Delete this standard",function(){
+        teacher.standards.splice(i,1); renderStandards();
+      }));
+      stdRows.appendChild(row);
+    });
+  }
+  document.getElementById("std-add").addEventListener("click",function(){
+    teacher.standards.push({std:"",loc:""});
+    renderStandards(); saveTeacher();
+    var inputs=stdRows.querySelectorAll("input");
+    if(inputs.length) inputs[inputs.length-2].focus();
+  });
+
+  var linksWrap=document.getElementById("scene-links");
+  function renderLinks(){
+    linksWrap.innerHTML="";
+    SCENES.forEach(function(s,i){
+      var box=document.createElement("div"); box.className="tscene";
+      var h=document.createElement("h4"); h.textContent="Scene "+(i+1)+" — "+s.label;
+      box.appendChild(h);
+      var list=teacher.links[s.id]||(teacher.links[s.id]=[]);
+      list.forEach(function(l,j){
+        var row=document.createElement("div"); row.className="trow";
+        row.appendChild(mkInput(l.label,"Link label (e.g. Densho photo set)",function(v){l.label=v;}));
+        var urlInput=mkInput(l.url,"https://…",function(v){l.url=v; a.href=v;});
+        row.appendChild(urlInput);
+        var a=document.createElement("a");
+        a.className="topen"; a.textContent="open ↗"; a.target="_blank"; a.rel="noopener";
+        a.href=l.url||"#";
+        row.appendChild(a);
+        row.appendChild(mkDel("Delete this link",function(){
+          list.splice(j,1); renderLinks();
+        }));
+        box.appendChild(row);
+      });
+      var add=document.createElement("button");
+      add.className="btn-small"; add.textContent="＋ Add link";
+      add.addEventListener("click",function(){
+        list.push({label:"",url:""});
+        renderLinks(); saveTeacher();
+      });
+      box.appendChild(add);
+      linksWrap.appendChild(box);
+    });
+  }
+  renderStandards(); renderLinks();
+
+  var ioMsg=document.getElementById("teacher-io-msg");
+  document.getElementById("teacher-export").addEventListener("click",function(){
+    var data=JSON.stringify({app:"chain-of-choices", version:1,
+      standards:teacher.standards, links:teacher.links}, null, 2);
+    var blob=new Blob([data],{type:"application/json"});
+    var a=document.createElement("a");
+    a.href=URL.createObjectURL(blob);
+    a.download="chain-of-choices-teacher-settings.json";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); },5000);
+    ioMsg.textContent="Downloaded chain-of-choices-teacher-settings.json ✓";
+  });
+  var fileInput=document.getElementById("teacher-file");
+  document.getElementById("teacher-import").addEventListener("click",function(){ fileInput.click(); });
+  fileInput.addEventListener("change",function(){
+    var f=fileInput.files[0];
+    if(!f) return;
+    var r=new FileReader();
+    r.onload=function(){
+      try{
+        var d=JSON.parse(r.result);
+        if(!d || !Array.isArray(d.standards) || typeof d.links!=="object" || d.links===null) throw new Error("shape");
+        teacher.standards=d.standards.map(function(s){return {std:String(s.std||""), loc:String(s.loc||"")};});
+        teacher.links={};
+        SCENES.forEach(function(s){
+          teacher.links[s.id]=(Array.isArray(d.links[s.id])?d.links[s.id]:[]).map(function(l){
+            return {label:String(l.label||""), url:String(l.url||"")};
+          });
+        });
+        saveTeacher(); renderStandards(); renderLinks();
+        ioMsg.textContent="Settings imported ✓ ("+teacher.standards.length+" standards)";
+      }catch(e){
+        ioMsg.textContent="Couldn't import that file — it doesn't look like a Chain of Choices settings file.";
+      }
+    };
+    r.readAsText(f);
+    fileInput.value="";
+  });
+
+  renderChainNav(current);
+})();
+</script>
